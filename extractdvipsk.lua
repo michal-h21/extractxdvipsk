@@ -59,12 +59,14 @@ end
 local function get_fonts(dvi_file, mapping, fontnames)
   -- find fonts used in the DVI file
   local used_fonts = {}
+  local font_map = {}
   local dviasm = io.popen("dviasm ".. dvi_file)
   local fntdef_found = false -- we don't want to parse the full DVI file
   for line in dviasm:lines() do
     -- opentype fonts are in quotes
     local font = line:match("fntdef: (.+) at")
     if font then
+      local orig_font = font -- save the current font for later use
       fntdef_found = true
       if font:match("^\"") then
         -- plainname is used
@@ -76,13 +78,14 @@ local function get_fonts(dvi_file, mapping, fontnames)
       end
       if mapping[font] then
         used_fonts[font] = mapping[font]
+        font_map[mapping[font]] = {dvi_name = orig_font}
       end
     elseif fntdef_found then
       -- break the processing after we had read all fntdefs
       break
     end
   end
-  return used_fonts
+  return used_fonts, font_map
 end
 
 
@@ -102,16 +105,34 @@ local function process_font(fontname, path)
       print(mappings[#mappings], entry.unicode, i)
     end
   end
-  return mappings
+  return mappings, metrics
 end
 
-local function write_mappings(fonts)
+local function update_font_map(font_map, path, metrics)
+  local entry = font_map[path]
+  entry.dvi_name = entry.dvi_name:gsub('"(.-)".+', '"%1"') -- fix for "font name" (10pt) etc.
+  entry.psname = metrics.fontname
+  entry.fullname = metrics.fullname
+  entry.path = path
+end
+
+local function save_font_map(job_name, font_map)
+  -- updated tex4ht needs mapping between DVI font name, font path and other info, like:
+  -- "Linux Libertine O"		LinLibertineO	Linux Libertine O	>/usr/.../LinLibertine_R.otf
+  local f = io.open(xdvipsk_dir .. "/" .. job_name .. ".opentype.map", "w")
+  for _, entry in pairs(font_map) do
+    f:write(string.format("%s\t\t%s\t%s\t>%s\n", entry.dvi_name, entry.psname, entry.fullname, entry.path))
+  end
+  f:close()
+end
+
+local function write_mappings(fonts, font_map)
   if not lfs.isdir(xdvipsk_dir) then
     lfs.mkdir(xdvipsk_dir)
   end
   for fontname, path in pairs(fonts) do
-    local mappings =  process_font(fontname, path)
-    
+    local mappings, metrics =  process_font(fontname, path)
+    update_font_map(font_map, path, metrics)
     local f = io.open(xdvipsk_dir .."/" .. fontname .. ".encodings.map", "w")
     f:write(table.concat(mappings, "\n"))
     f:close()
@@ -123,8 +144,10 @@ local dvi_file = arg[1] or "sample.dvi"
 -- address of the Luaotfload font cache file. 
 local cachefile  = kpse.expand_var("$TEXMFVAR")  .. "/luatex-cache/generic/names/luaotfload-names.luc"
 local mapping, fontnames = get_mappings(cachefile)
-local fonts = get_fonts(dvi_file, mapping, fontnames)
-write_mappings(fonts)
+local fonts, font_map = get_fonts(dvi_file, mapping, fontnames)
+write_mappings(fonts, font_map)
+local job_name = dvi_file:gsub("%..-$", "")
+save_font_map(job_name, font_map)
 
 -- -- local libertine = kpse.find_file("LinLibertine_R.otf", "opentype fonts")
 -- local libertine = mapping["Linux Libertine O"]
