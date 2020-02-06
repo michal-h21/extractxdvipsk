@@ -1,5 +1,7 @@
 kpse.set_program_name "luatex"
 
+require "lualibs"
+
 local xdvipsk_dir = ".xdvipsk"
 
 local rshift = bit32.rshift
@@ -60,21 +62,24 @@ local function get_fonts(dvi_file, mapping, fontnames)
   -- find fonts used in the DVI file
   local used_fonts = {}
   local font_map = {}
-  local dviasm = io.popen("dviasm ".. dvi_file)
+  local dviasm = io.popen("dviinfox ".. dvi_file)
   local fntdef_found = false -- we don't want to parse the full DVI file
   for line in dviasm:lines() do
     -- opentype fonts are in quotes
-    local font = line:match("fntdef: (.+) at")
+    local font = line:match("Font.-:%s+(.+) at")
     if font then
       local orig_font = font -- save the current font for later use
       fntdef_found = true
       if font:match("^\"") then
         -- plainname is used
         font = font:match('"(.-)"')
+        orig_font = orig_font:gsub("%s*%(.+%)%s*$", "")-- we must remove stuff in (brackets) at the end
+        print(orig_font)
       elseif font:match("^%[") then
         -- basename is used
         font = font:match("%[(.-)%]")
         font = fontnames[font] or false
+      elseif font:match("%:") then
       end
       if mapping[font] then
         used_fonts[font] = mapping[font]
@@ -88,8 +93,20 @@ local function get_fonts(dvi_file, mapping, fontnames)
   return used_fonts, font_map
 end
 
+local function update_font_map_raw(entry, path, metrics)
+  -- local entry = font_map[path]
+  entry.psname = metrics.fontname
+  entry.fullname = metrics.fullname
+  -- make default subfamily
+  metrics.names = metrics.names or {{names={subfamily="regular"}}}
+  entry.subfamily = metrics.names[1].names.subfamily
+  entry.path = path
+end
 
-local function process_font(fontname, path)
+local function process_raw_font(fontname, path, entry)
+  -- get font characters and information from LuaTeX's fontloader library
+  -- it is possible that it will be removed in the future, so this method
+  -- is used only if fetching of the font information from Luaotfload cache fails
   local mappings = {}
   local f = fontloader.open(path)
   local metrics = fontloader.to_table(f)
@@ -102,18 +119,41 @@ local function process_font(fontname, path)
     if glyph then
       local entry = glyphs[glyph]
       mappings[#mappings+1] = string.format("%s,%s,%s,%s,%s", i, glyph, tounicode(i), entry.width, 0)
-      print(mappings[#mappings], entry.unicode, i)
+      -- print(mappings[#mappings], entry.unicode, i)
     end
   end
+  update_font_map_raw(entry, path, metrics)
   return mappings, metrics
 end
 
-local function update_font_map(font_map, path, metrics)
-  local entry = font_map[path]
-  entry.dvi_name = entry.dvi_name:gsub('"(.-)".+', '"%1"') -- fix for "font name" (10pt) etc.
-  entry.psname = metrics.fontname
-  entry.fullname = metrics.fullname
+local function process_luaotfload_font(fontname, path, entry)
+  -- get the font file name without extension, in lowercase and replace underscores 
+  local font_base = string.lower(path:match("([^%/]+)%..-$") or ""):gsub("_", "-")
+  -- try to find it in Luaotfload cache
+  local cache_path = kpse.expand_var("$TEXMFVAR")  .. "/luatex-cache/generic/fonts/otl/" .. font_base .. ".luc"
+  local status = lfs.attributes(cache_path)
+  if not status then return nil, "Cannot load font cache file: ".. cache_path end
+  local metrics = dofile(cache_path)
+  local mappings = {}
+  for x, char in table.sortedhash(metrics.descriptions) do
+    mappings[#mappings+1] = string.format("%s,%s,%s,%s,%s", x, char.index, tounicode(x), char.width, 0)
+  end
+  local metadata = metrics.metadata or {}
+  entry.psname = metadata.fontname
+  entry.fullname = metadata.fullname
+  entry.family = metadata.family
+  entry.subfamily = metadata.subfamily
+  entry.monospaced = metadata.monospaced
   entry.path = path
+  return mappings, metrics
+end
+
+local function process_font(fontname, path, entry)
+  local mappings, metrics = process_luaotfload_font(fontname, path, entry)
+  if type(mappings) ~= "table" then -- we couldn't load font from Luaotfload cache
+    return process_raw_font(fontname, path, entry)
+  end
+  return mappings, metrics
 end
 
 local function save_font_map(job_name, font_map)
@@ -121,7 +161,7 @@ local function save_font_map(job_name, font_map)
   -- "Linux Libertine O"		LinLibertineO	Linux Libertine O	>/usr/.../LinLibertine_R.otf
   local f = io.open(xdvipsk_dir .. "/" .. job_name .. ".opentype.map", "w")
   for _, entry in pairs(font_map) do
-    f:write(string.format("%s\t\t%s\t%s\t>%s\n", entry.dvi_name, entry.psname, entry.fullname, entry.path))
+    f:write(string.format("%s\t\t%s\t%s\t>%s\t%s\n", entry.dvi_name, entry.psname, entry.fullname, entry.path, entry.subfamily))
   end
   f:close()
 end
@@ -131,8 +171,9 @@ local function write_mappings(fonts, font_map)
     lfs.mkdir(xdvipsk_dir)
   end
   for fontname, path in pairs(fonts) do
-    local mappings, metrics =  process_font(fontname, path)
-    update_font_map(font_map, path, metrics)
+    local entry = font_map[path]
+    local mappings, metrics =  process_font(fontname, path, entry)
+    -- update_font_map(font_map, path, metrics)
     local f = io.open(xdvipsk_dir .."/" .. fontname .. ".encodings.map", "w")
     f:write(table.concat(mappings, "\n"))
     f:close()
@@ -150,11 +191,24 @@ local job_name = dvi_file:gsub("%..-$", "")
 save_font_map(job_name, font_map)
 
 -- -- local libertine = kpse.find_file("LinLibertine_R.otf", "opentype fonts")
--- local libertine = mapping["Linux Libertine O"]
+local libertine = mapping["Amiri"]
 
--- local f = fontloader.open(libertine)
--- local metrics = fontloader.to_table(f)
--- fontloader.close(f)
+local f = fontloader.open(libertine)
+local metrics = fontloader.to_table(f)
+fontloader.close(f)
+
+for k,v in pairs(metrics.names[1].names) do 
+  -- if type(v) == "table" then
+    print(k,v) 
+  -- end
+end
+
+local pokus = dofile("/home/mint/.texlive2019/texmf-var/luatex-cache/generic/fonts/otl/linlibertine-r.luc")
+-- local pokus = dofile("/home/mint/.texlive2019/texmf-var/luatex-cache/generic/fonts/hb/:home:mint:.fonts:FiraSans-Bold.otf:1")
+print("---------------")
+for k,v in pairs(pokus.metadata) do
+  print(k,v)
+end
 
 -- for _,char in utf8.codes("Příliš žluťoučký kůň") do
 --   local glyph = metrics.map.map[char]
