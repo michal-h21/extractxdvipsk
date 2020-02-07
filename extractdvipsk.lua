@@ -80,10 +80,20 @@ local function get_fonts(dvi_file, mapping, fontnames)
         font = font:match("%[(.-)%]")
         font = fontnames[font] or false
       elseif font:match("%:") then
+        local name_parts = font:explode(":")
+        if name_parts[1] == "file" then 
+        elseif name_parts[1] == "name" then
+          font = name_parts[2] -- name:font name schema
+        else
+          font = name_parts[1] -- font name is first part
+        end
+
       end
-      if mapping[font] then
-        used_fonts[font] = mapping[font]
-        font_map[mapping[font]] = {dvi_name = orig_font}
+      local font_path = mapping[font]
+      if  font_path then
+        used_fonts[font] = font_path
+        print(orig_font, font, font_path)
+        font_map[mapping[font]] = {dvi_name = orig_font, path = font_path}
       end
     elseif fntdef_found then
       -- break the processing after we had read all fntdefs
