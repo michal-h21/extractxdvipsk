@@ -51,8 +51,7 @@ local function get_mappings(cachefile)
   for _, x in ipairs(fontlist.mappings) do
     --- mapping between font name and file path
     mapping[x.plainname] = x.fullpath
-    -- remove file extension
-    local fontname = x.basename:gsub("%..-$", "")
+    local fontname = x.basename --:gsub("%..-$", "")
     fontnames[fontname] = x.plainname
   end
   return mapping, fontnames
@@ -74,7 +73,6 @@ local function get_fonts(dvi_file, mapping, fontnames)
         -- plainname is used
         font = font:match('"(.-)"')
         orig_font = orig_font:gsub("%s*%(.+%)%s*$", "")-- we must remove stuff in (brackets) at the end
-        print(orig_font)
       elseif font:match("^%[") then
         -- basename is used
         font = font:match("%[(.-)%]")
@@ -82,6 +80,9 @@ local function get_fonts(dvi_file, mapping, fontnames)
       elseif font:match("%:") then
         local name_parts = font:explode(":")
         if name_parts[1] == "file" then 
+          -- we have font file name, this needs to be translated
+          -- to font name. The font name will be translated to path to font file later.
+          font = fontnames[name_parts[2]]
         elseif name_parts[1] == "name" then
           font = name_parts[2] -- name:font name schema
         else
@@ -89,6 +90,11 @@ local function get_fonts(dvi_file, mapping, fontnames)
         end
 
       end
+      -- fix font style modifiers
+      font = font:gsub("/(.)$", function(x) 
+        local replaces = {B="Bold", I="Italic", BI="BoldItalic"}
+        if replaces[x] then return " " .. replaces[x] end
+      end)
       local font_path = mapping[font]
       if  font_path then
         used_fonts[font] = font_path
@@ -184,7 +190,8 @@ local function write_mappings(fonts, font_map)
     local entry = font_map[path]
     local mappings, metrics =  process_font(fontname, path, entry)
     -- update_font_map(font_map, path, metrics)
-    local f = io.open(xdvipsk_dir .."/" .. fontname .. ".encodings.map", "w")
+    local fullname = entry.fullname -- use version of font name obtained from the font itself
+    local f = io.open(xdvipsk_dir .."/" .. fullname .. ".encodings.map", "w") 
     f:write(table.concat(mappings, "\n"))
     f:close()
   end
