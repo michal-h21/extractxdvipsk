@@ -3,7 +3,7 @@ All:  sample.html sample.pdf sample.dvi
 sample.pdf: sample.tex
 	lualatex-dev $<
 
-sample.dvi: sample.tex usepackage-fontspec.4ht
+sample.dvi: sample.tex usepackage-fontspec.4ht config.cfg
 	make4ht -a debug -ulm draft -n -f html5+detect_engine -c config.cfg $<
 
 sample.html: sample.dvi extractdvipsk.lua
