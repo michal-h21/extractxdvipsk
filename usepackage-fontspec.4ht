@@ -1,0 +1,8 @@
+\RequirePackage{luacode}
+\begin{luacode*}
+  local k = luatexbase.callback_descriptions("pre_output_filter")
+  for k,v in pairs(k) do
+  print("callback", k, v)
+  end
+\end{luacode*}
+\endinput
