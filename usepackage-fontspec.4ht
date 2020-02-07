@@ -1,8 +1,13 @@
+\ifdefined\directlua
 \RequirePackage{luacode}
 \begin{luacode*}
-  local k = luatexbase.callback_descriptions("pre_output_filter")
-  for k,v in pairs(k) do
-  print("callback", k, v)
+-- remove Harfbuzz related callbacks
+  local callbacks = luatexbase.callback_descriptions("pre_output_filter")
+  for i,name in ipairs(callbacks) do
+    if name:match("^Harf") then
+      luatexbase.remove_from_callback("pre_output_filter", name)
+    end
   end
 \end{luacode*}
+\fi
 \endinput
