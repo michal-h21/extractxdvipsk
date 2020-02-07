@@ -1,18 +1,21 @@
-% !TEX TS-program = harflatex
+%!TEX TS-program = harflatex
 \documentclass{article}
-% \usepackage{fontspec}
+\usepackage{fontspec}
+\setmainfont{Gentium}
 \usepackage{luaotfload}
 \font\pokus={Linux Libertine O} at 12pt
 \font\amiri={Amiri:mode=harf;script=arab} at 12pt
-% \usepackage{luafonts}
+\font\apcregular = file:antpoltltcond-regular.otf at 42pt
+\newenvironment{arab}{\pardir TRT\textdir TRT\amiri}{}
 \begin{document}
 \fontencoding{TU}
 Příliš žluťoučký \textit{kůň úpěl ďábelské ódy}
 
 \pokus zase příliš
 
-% \pardir TRT
-% \textdir TRT
-\amiri 
-براغ (بالتشيكية: Praha، براها) هي عاصمة جمهورية التشيك وأكبر مدنها. تقع على نهر فلتافا في وسط منطقة بوهيميا التاريخية. بخلاف الكثير من مدن أوروبا الوسطى لم تدمر المدينة بشكل كبير في الحرب العالمية الثانية 
+\begin{arab}
+براغ (بالتشيكية: Praha، براها) هي عاصمة جمهورية %التشيك وأكبر مدنها. تقع على نهر فلتافا في وسط منطقة بوهيميا التاريخية. بخلاف الكثير من مدن أوروبا الوسطى لم تدمر المدينة بشكل كبير في الحرب العالمية الثانية 
+\end{arab}
+
+\apcregular Hello antikwa
 \end{document}
