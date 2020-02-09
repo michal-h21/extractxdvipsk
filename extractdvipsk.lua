@@ -220,12 +220,12 @@ for k,v in pairs(metrics.names[1].names) do
   -- end
 end
 
-local pokus = dofile("/home/mint/.texlive2019/texmf-var/luatex-cache/generic/fonts/otl/linlibertine-r.luc")
--- local pokus = dofile("/home/mint/.texlive2019/texmf-var/luatex-cache/generic/fonts/hb/:home:mint:.fonts:FiraSans-Bold.otf:1")
-print("---------------")
-for k,v in pairs(pokus.metadata) do
-  print(k,v)
-end
+-- local pokus = dofile(kpse.expand_var("$TEXMFVAR") .. "/luatex-cache/generic/fonts/otl/linlibertine-r.luc")
+-- -- local pokus = dofile("/home/mint/.texlive2019/texmf-var/luatex-cache/generic/fonts/hb/:home:mint:.fonts:FiraSans-Bold.otf:1")
+-- print("---------------")
+-- for k,v in pairs(pokus.metadata) do
+--   print(k,v)
+-- end
 
 -- for _,char in utf8.codes("Příliš žluťoučký kůň") do
 --   local glyph = metrics.map.map[char]

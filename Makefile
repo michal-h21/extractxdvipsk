@@ -1,4 +1,4 @@
-All:  sample.html sample.pdf sample.dvi
+All:  sample.pdf sample.html sample.dvi 
 
 sample.pdf: sample.tex
 	lualatex-dev $<

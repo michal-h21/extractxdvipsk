@@ -1,4 +1,7 @@
-%!TEX TS-program = harflatex
+% this doesn't workd correctly: !TEX TS-program = harflatex
+% it doesn't keep Arabic test, probably because of OpenType shaping 
+% we need to use LuaLaTeX instead
+%!TEX TS-program = lualatex
 \documentclass{article}
 \usepackage{fontspec}
 \setmainfont{Gentium}
@@ -14,7 +17,7 @@ Příliš žluťoučký \textit{kůň úpěl ďábelské ódy}
 \pokus zase příliš
 
 \begin{arab}
-براغ (بالتشيكية: Praha، براها) هي عاصمة جمهورية %التشيك وأكبر مدنها. تقع على نهر فلتافا في وسط منطقة بوهيميا التاريخية. بخلاف الكثير من مدن أوروبا الوسطى لم تدمر المدينة بشكل كبير في الحرب العالمية الثانية 
+براغ (بالتشيكية: Praha، براها) هي عاصمة جمهورية التشيك وأكبر مدنها. تقع على نهر فلتافا في وسط منطقة بوهيميا التاريخية. بخلاف الكثير من مدن أوروبا الوسطى لم تدمر المدينة بشكل كبير في الحرب العالمية الثانية 
 \end{arab}
 
 \apcregular Hello antikwa
