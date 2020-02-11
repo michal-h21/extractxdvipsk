@@ -50,11 +50,24 @@ local function get_mappings(cachefile)
   local fontnames = {}
   for _, x in ipairs(fontlist.mappings) do
     --- mapping between font name and file path
-    mapping[x.plainname] = x.fullpath
+    mapping[x.fullname] = x.fullpath
     local fontname = x.basename --:gsub("%..-$", "")
-    fontnames[fontname] = x.plainname
+    fontnames[fontname] = x.fullname
   end
   return mapping, fontnames
+end
+
+local function normalize_font_name(font)
+  -- normalize font name
+  font = font:gsub("/(.)$", function(x) 
+    local replaces = {B="Bold", I="Italic", BI="BoldItalic"}
+    if replaces[x] then return " " .. replaces[x] end
+  end)
+  -- remove spaces and other symbols
+  font = font:gsub("[%s%-%_]", "")
+  -- make string lower case
+  font = string.lower(font)
+  return font
 end
 
 local function get_fonts(dvi_file, mapping, fontnames)
@@ -91,15 +104,12 @@ local function get_fonts(dvi_file, mapping, fontnames)
 
       end
       -- fix font style modifiers
-      font = font:gsub("/(.)$", function(x) 
-        local replaces = {B="Bold", I="Italic", BI="BoldItalic"}
-        if replaces[x] then return " " .. replaces[x] end
-      end)
-      local font_path = mapping[font]
+      font = normalize_font_name(font)
+      local font_path = mapping[font] or mapping[font.. "regular"] --
       if  font_path then
         used_fonts[font] = font_path
         print(orig_font, font, font_path)
-        font_map[mapping[font]] = {dvi_name = orig_font, path = font_path}
+        font_map[font_path] = {dvi_name = orig_font, path = font_path}
       end
     elseif fntdef_found then
       -- break the processing after we had read all fntdefs
@@ -208,7 +218,7 @@ local job_name = dvi_file:gsub("%..-$", "")
 save_font_map(job_name, font_map)
 
 -- -- local libertine = kpse.find_file("LinLibertine_R.otf", "opentype fonts")
-local libertine = mapping["Amiri"]
+local libertine = mapping["amiri"]
 
 local f = fontloader.open(libertine)
 local metrics = fontloader.to_table(f)
