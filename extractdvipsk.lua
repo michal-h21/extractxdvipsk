@@ -89,7 +89,6 @@ local function get_fonts(dvi_file, mapping, fontnames)
       elseif font:match("^%[") then
         -- basename is used
         font = font:match("%[(.-)%]")
-        font = fontnames[font] or false
       elseif font:match("%:") then
         local name_parts = font:explode(":")
         if name_parts[1] == "file" then 
@@ -103,13 +102,15 @@ local function get_fonts(dvi_file, mapping, fontnames)
         end
 
       end
-      -- fix font style modifiers
-      font = normalize_font_name(font)
-      local font_path = mapping[font] or mapping[font.. "regular"] --
-      if  font_path then
-        used_fonts[font] = font_path
-        print(orig_font, font, font_path)
-        font_map[font_path] = {dvi_name = orig_font, path = font_path}
+      if font then
+        -- fix font style modifiers
+        font = normalize_font_name(font)
+        local font_path = mapping[font] or mapping[font.. "regular"] --
+        if  font_path then
+          used_fonts[font] = font_path
+          print(orig_font, font, font_path)
+          font_map[font_path] = {dvi_name = orig_font, path = font_path}
+        end
       end
     elseif fntdef_found then
       -- break the processing after we had read all fntdefs
