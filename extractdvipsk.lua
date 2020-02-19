@@ -147,6 +147,7 @@ local function process_raw_font(fontname, path, entry)
     local glyph = map[i]
     if glyph then
       local entry = glyphs[glyph]
+      entry.width = entry.width or 0
       mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", i, glyph, tounicode(i), wdt_fact * tonumber(entry.width), 0)
       -- print(mappings[#mappings], entry.unicode, i)
     end
