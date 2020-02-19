@@ -4,6 +4,8 @@ require "lualibs"
 
 local xdvipsk_dir = ".xdvipsk"
 
+local wdt_fact = 786.432
+
 local rshift = bit32.rshift
 local f_single = function(x) return string.format("%04X", x) end
 local f_double = function(x,y) return string.format("%04X%04X", x,y) end
@@ -145,7 +147,7 @@ local function process_raw_font(fontname, path, entry)
     local glyph = map[i]
     if glyph then
       local entry = glyphs[glyph]
-      mappings[#mappings+1] = string.format("%s,%s,%s,%s,%s", i, glyph, tounicode(i), entry.width, 0)
+      mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", i, glyph, tounicode(i), wdt_fact * tonumber(entry.width), 0)
       -- print(mappings[#mappings], entry.unicode, i)
     end
   end
@@ -163,7 +165,8 @@ local function process_luaotfload_font(fontname, path, entry)
   local metrics = dofile(cache_path)
   local mappings = {}
   for x, char in table.sortedhash(metrics.descriptions) do
-    mappings[#mappings+1] = string.format("%s,%s,%s,%s,%s", x, char.index, tounicode(x), char.width, 0)
+    char.width = char.width or 0
+    mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", x, char.index, tounicode(x), wdt_fact * tonumber(char.width), 0)
   end
   local metadata = metrics.metadata or {}
   entry.psname = metadata.fontname
