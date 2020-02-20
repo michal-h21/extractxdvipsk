@@ -1,7 +1,7 @@
 All:  sample.pdf sample.html sample.dvi 
 
 sample.pdf: sample.tex
-	lualatex-dev $<
+	lualatex $<
 
 sample.dvi: sample.tex usepackage-fontspec.4ht config.cfg
 	make4ht -a debug -ulm draft -n -f html5+detect_engine -c config.cfg $<
