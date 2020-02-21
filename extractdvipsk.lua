@@ -165,9 +165,14 @@ local function process_luaotfload_font(fontname, path, entry)
   if not status then return nil, "Cannot load font cache file: ".. cache_path end
   local metrics = dofile(cache_path)
   local mappings = {}
+  local metadata = metrics.metadata
+  -- we need units to calculate correct 
+  local units = metadata.units or 1000
+  -- 
+  local font_size = 10 
   for x, char in table.sortedhash(metrics.descriptions) do
     char.width = char.width or 0
-    mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", x, char.index, tounicode(x), wdt_fact * tonumber(char.width), 0)
+    mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", x, char.index, tounicode(x), tonumber(char.width) / units * (font_size * 65536 ), 0)
   end
   local metadata = metrics.metadata or {}
   entry.psname = metadata.fontname
