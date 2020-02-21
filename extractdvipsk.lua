@@ -168,11 +168,17 @@ local function process_luaotfload_font(fontname, path, entry)
   local metadata = metrics.metadata
   -- we need units to calculate correct 
   local units = metadata.units or 1000
+  -- try to get size of the space character
+  local space_width = metrics.descriptions[32].width or units / 2
+  local width = space_width / units * 65536
   -- it seems the calculated character width doesn't need to rely on font size
   local font_size = 1 
   for x, char in table.sortedhash(metrics.descriptions) do
     char.width = char.width or 0
-    mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", x, char.index, tounicode(x), tonumber(char.width) / units * (font_size * 65536 ), 0)
+    -- we have two options: either calculate the width of individual characters:
+    -- mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", x, char.index, tounicode(x), tonumber(char.width) / units * (font_size * 65536 ), 0)
+    -- the second option is to use width of the space character for all characters. it seems to work equally good in my tests:
+    mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", x, char.index, tounicode(x), width, 0)
   end
   local metadata = metrics.metadata or {}
   entry.psname = metadata.fontname
