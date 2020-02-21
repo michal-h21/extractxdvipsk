@@ -168,8 +168,8 @@ local function process_luaotfload_font(fontname, path, entry)
   local metadata = metrics.metadata
   -- we need units to calculate correct 
   local units = metadata.units or 1000
-  -- 
-  local font_size = 10 
+  -- it seems the calculated character width doesn't need to rely on font size
+  local font_size = 1 
   for x, char in table.sortedhash(metrics.descriptions) do
     char.width = char.width or 0
     mappings[#mappings+1] = string.format("%s,%s,%s,%f,%s", x, char.index, tounicode(x), tonumber(char.width) / units * (font_size * 65536 ), 0)
